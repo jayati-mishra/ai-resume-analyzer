@@ -2,6 +2,8 @@
 import { useState } from "react";
 import "./App.css";
 
+const API_URL = "https://ai-resume-analyzer-2qfb.onrender.com";
+
 function App() {
   const [resume, setResume] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -38,13 +40,10 @@ function App() {
     setUploading(true);
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/extract-pdf",
-        {
-          method: "POST",
-          body: formData
-        }
-      );
+      const response = await fetch(`${API_URL}/extract-pdf`, {
+        method: "POST",
+        body: formData,
+      });
 
       const data = await response.json();
 
@@ -52,12 +51,13 @@ function App() {
         throw new Error(data.error || "PDF upload failed.");
       }
 
-      setResume(data.text);
-      setUploadMessage(
-        `Successfully extracted text from ${file.name}`
-      );
+      setResume(data.text || "");
+      setUploadMessage(`Successfully extracted text from ${file.name}`);
     } catch (error) {
-      setUploadMessage("Error: " + error.message);
+      setUploadMessage(
+        "Error: " +
+          (error.message || "Could not upload PDF. Please try again.")
+      );
     } finally {
       setUploading(false);
       event.target.value = "";
@@ -75,19 +75,16 @@ function App() {
     setAtsResult(null);
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/analyze",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            resume,
-            jobDescription
-          })
-        }
-      );
+      const response = await fetch(`${API_URL}/analyze`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resume,
+          jobDescription,
+        }),
+      });
 
       const data = await response.json();
 
@@ -99,12 +96,15 @@ function App() {
         score: data.atsScore,
         matched: data.matchedSkills || [],
         missing: data.missingSkills || [],
-        total: data.totalRequiredSkills ?? 0
+        total: data.totalRequiredSkills ?? 0,
       });
 
       setAnalysis(data.analysis || "No analysis returned.");
     } catch (error) {
-      setAnalysis("Error: " + error.message);
+      setAnalysis(
+        "Error: " +
+          (error.message || "Could not analyze resume. Please try again.")
+      );
     } finally {
       setLoading(false);
     }
@@ -169,9 +169,7 @@ function App() {
           <h2>ATS Match Score</h2>
 
           {atsResult.score == null ? (
-            <p>
-              No recognized skills were found in the job description.
-            </p>
+            <p>No recognized skills were found in the job description.</p>
           ) : (
             <>
               <div className="score-number">
@@ -193,24 +191,19 @@ function App() {
               </div>
 
               <p>
-                Matched <strong>{atsResult.matched.length}</strong>{" "}
-                out of <strong>{atsResult.total}</strong>{" "}
-                recognized required skills.
+                Matched <strong>{atsResult.matched.length}</strong> out of{" "}
+                <strong>{atsResult.total}</strong> recognized required skills.
               </p>
 
               <h3>Matched Skills</h3>
-              <p>
-                {atsResult.matched.join(", ") || "None"}
-              </p>
+              <p>{atsResult.matched.join(", ") || "None"}</p>
 
               <h3>Missing Skills</h3>
-              <p>
-                {atsResult.missing.join(", ") || "None"}
-              </p>
+              <p>{atsResult.missing.join(", ") || "None"}</p>
 
               <small>
-                This is an estimated keyword-match score, not an
-                official ATS rating or a prediction of hiring success.
+                This is an estimated keyword-match score, not an official ATS
+                rating or a prediction of hiring success.
               </small>
             </>
           )}
